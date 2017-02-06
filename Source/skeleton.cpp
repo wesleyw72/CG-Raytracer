@@ -4,6 +4,7 @@
 #include "SDLauxiliary.h"
 #include "TestModel.h"
 
+#define PI 3.14159265359
 using namespace std;
 using glm::vec3;
 using glm::mat3;
@@ -11,14 +12,16 @@ using glm::mat3;
 /* ----------------------------------------------------------------------------*/
 /* GLOBAL VARIABLES                                                            */
 
-const int SCREEN_WIDTH = 100;
-const int SCREEN_HEIGHT = 100;
+const int SCREEN_WIDTH = 500;
+const int SCREEN_HEIGHT = 500;
 SDL_Surface* screen;
 vector<Triangle> triangles;
 int t;
 float focalLength = SCREEN_WIDTH/2;
-vec3 cameraPos( 0.0f, 0.0f,-2.0f);
 
+vec3 cameraPos( 0.0f, 0.0f,-2.0f);
+vec3 lightPos( 0, -0.5, -0.7 );
+vec3 lightColor = 14.f * vec3( 1, 1, 1 );
 
 /* ----------------------------------------------------------------------------*/
 /* STRUCTS                                                           */
@@ -36,7 +39,22 @@ Intersection closestIntersection;
 void Update();
 void Draw();
 bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,Intersection& closestIntersection);
-
+vec3 DirectLight( const Intersection& i )
+{
+	
+	//Calculate Vector to light source
+	vec3 r = lightPos - i.position;
+	float rL = glm::length(r);
+	r = glm::normalize(r);
+	vec3 norm = glm::normalize(triangles[i.triangleIndex].normal);
+	//Calculte dot product between normal and ray to light
+	float comp = glm::dot(r,norm);
+	comp = glm::max(0.0f,comp);
+	
+	//float temp = (float)(comp/ 4*PI*(rL*rL));
+	vec3 d = lightColor * ((float)(comp/ (4*PI*(rL*rL)))) ;
+	return d;
+}
 int main( int argc, char* argv[] )
 {
 	screen = InitializeSDL( SCREEN_WIDTH, SCREEN_HEIGHT );
@@ -56,6 +74,9 @@ int main( int argc, char* argv[] )
 
 void Update()
 {
+	vec3 Vforward(0.0f,0.0f,0.1f);
+	vec3 Vright(0.1f,0.0f,0.0f);
+	vec3 Vup(0.0f,0.1f,0.0f);
 	// Compute frame time
 	int t2 = SDL_GetTicks();
 	float dt = float(t2-t);
@@ -84,6 +105,18 @@ void Update()
 	// Move camera to the right
 		cameraPos.x = cameraPos.x + 0.1f;
 	}
+	if( keystate[SDLK_w] )
+		lightPos += Vforward;
+	if( keystate[SDLK_s] )
+		lightPos -= Vforward;
+	if( keystate[SDLK_d] )
+		lightPos += Vright;
+	if( keystate[SDLK_a] )
+		lightPos -= Vright;
+	if( keystate[SDLK_q] )
+		lightPos += Vup;
+	if( keystate[SDLK_e] )
+		lightPos -= Vup;
 }
 
 void Draw()
@@ -103,7 +136,8 @@ void Draw()
 			vec3 d (xDiff, yDiff, focalLength);
 			vec3 color ( 0.0f,0.0f, 0.0f);
 			if(ClosestIntersection(cameraPos,d,triangles,closestIntersection)){
-				color = triangles[closestIntersection.triangleIndex].color;
+				color = DirectLight(closestIntersection);
+				//color = triangles[closestIntersection.triangleIndex].color;
 			}
 			PutPixelSDL( screen, x, y, color );
 		}
@@ -133,11 +167,11 @@ bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,I
 		float u = x.y;
 		float v = x.z;
 
-		if( 0 <= t && 0 < u && 0< v && u + v <= 1){
+		if( 0 <= t && 0 <= u && 0<= v && u + v <= 1){
 			toReturn = true;
-			if(t < closestIntersection.distance ){
-				closestIntersection.position = x;
-				closestIntersection.distance = t;
+			if(t*glm::length(dir) < closestIntersection.distance ){
+				closestIntersection.position = start+t*dir;
+				closestIntersection.distance = t*glm::length(dir); //length of dir
 				closestIntersection.triangleIndex = i;
 			}
 		}
