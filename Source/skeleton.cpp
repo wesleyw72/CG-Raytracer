@@ -38,7 +38,7 @@ Intersection closestIntersection;
 /* FUNCTIONS                                                                   */
 void Update();
 void Draw();
-bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,Intersection& closestIntersection);
+bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,Intersection& closestIntersection,int TriangleToIgnore);
 vec3 DirectLight( const Intersection& i )
 {
 	
@@ -53,6 +53,17 @@ vec3 DirectLight( const Intersection& i )
 	
 	//float temp = (float)(comp/ 4*PI*(rL*rL));
 	vec3 d = lightColor * ((float)(comp/ (4*PI*(rL*rL)))) ;
+	//Shadow
+	Intersection closestIntersection2;
+	bool cl = ClosestIntersection(i.position,r,triangles,closestIntersection2,i.triangleIndex);
+	if(cl)
+	{
+		if(closestIntersection2.distance<rL)
+		{
+			vec3 black(0.0f,0.0f,0.0f);
+			d = black;
+		}
+	}
 	return d;
 }
 int main( int argc, char* argv[] )
@@ -135,7 +146,7 @@ void Draw()
 			float yDiff = y - float(SCREEN_HEIGHT/2);
 			vec3 d (xDiff, yDiff, focalLength);
 			vec3 color ( 0.0f,0.0f, 0.0f);
-			if(ClosestIntersection(cameraPos,d,triangles,closestIntersection)){
+			if(ClosestIntersection(cameraPos,d,triangles,closestIntersection,-1)){
 				color = DirectLight(closestIntersection)*triangles[closestIntersection.triangleIndex].color;
 				//color = triangles[closestIntersection.triangleIndex].color;
 			}
@@ -149,7 +160,7 @@ void Draw()
 	SDL_UpdateRect( screen, 0, 0, 0, 0 );
 }
 
-bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,Intersection& closestIntersection){
+bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,Intersection& closestIntersection,int TriangleToIgnore){
 	bool toReturn = false;
 
 	for(int i = 0; i < triangles.size() ; i ++){
@@ -168,8 +179,8 @@ bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,I
 		float v = x.z;
 
 		if( 0 <= t && 0 <= u && 0<= v && u + v <= 1){
-			toReturn = true;
-			if(t*glm::length(dir) < closestIntersection.distance ){
+			if(t*glm::length(dir) < closestIntersection.distance && closestIntersection.triangleIndex!=TriangleToIgnore){
+				toReturn = true;
 				closestIntersection.position = start+t*dir;
 				closestIntersection.distance = t*glm::length(dir); //length of dir
 				closestIntersection.triangleIndex = i;
