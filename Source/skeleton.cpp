@@ -11,13 +11,16 @@ using glm::mat3;
 /* ----------------------------------------------------------------------------*/
 /* GLOBAL VARIABLES                                                            */
 
-const int SCREEN_WIDTH = 100;
-const int SCREEN_HEIGHT = 100;
+const int SCREEN_WIDTH = 500;
+const int SCREEN_HEIGHT = 500;
 SDL_Surface* screen;
 vector<Triangle> triangles;
 int t;
 float focalLength = SCREEN_WIDTH/2;
 vec3 cameraPos( 0.0f, 0.0f,-2.0f);
+glm::mat3 R;
+float angle = 0.0f;
+float yaw = 0.1f;
 
 
 /* ----------------------------------------------------------------------------*/
@@ -36,6 +39,7 @@ Intersection closestIntersection;
 void Update();
 void Draw();
 bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,Intersection& closestIntersection);
+void ModifyRotationMatrix(float value);
 
 int main( int argc, char* argv[] )
 {
@@ -43,6 +47,7 @@ int main( int argc, char* argv[] )
 	t = SDL_GetTicks();	// Set start value for timer.
 	LoadTestModel( triangles );
 	cout << triangles.size() << endl;
+	ModifyRotationMatrix(0);
 	while( NoQuitMessageSDL() )
 	{
 		Update();
@@ -76,21 +81,25 @@ void Update()
 	}
 	if( keystate[SDLK_LEFT] )
 	{
-	// Move camera to the left
-		cameraPos.x = cameraPos.x - 0.1f;
+		angle -= yaw;
+		ModifyRotationMatrix(-yaw);
+		cameraPos = R * cameraPos;
 	}
 	if( keystate[SDLK_RIGHT] )
 	{
-	// Move camera to the right
-		cameraPos.x = cameraPos.x + 0.1f;
+		angle += yaw;
+		ModifyRotationMatrix(yaw);
+		cameraPos = R * cameraPos;
+		
 	}
+	printf("%f\n",angle);
 }
 
 void Draw()
 {
 	if( SDL_MUSTLOCK(screen) )
 		SDL_LockSurface(screen);
-
+	ModifyRotationMatrix(angle);
 	for( int y=0; y<SCREEN_HEIGHT; ++y )
 	{
 		for( int x=0; x<SCREEN_WIDTH; ++x )
@@ -101,6 +110,7 @@ void Draw()
 			float xDiff = x - float(SCREEN_WIDTH/2);
 			float yDiff = y - float(SCREEN_HEIGHT/2);
 			vec3 d (xDiff, yDiff, focalLength);
+			d = R*d;
 			vec3 color ( 0.0f,0.0f, 0.0f);
 			if(ClosestIntersection(cameraPos,d,triangles,closestIntersection)){
 				color = triangles[closestIntersection.triangleIndex].color;
@@ -136,8 +146,8 @@ bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,I
 		if( 0 <= t && 0 < u && 0< v && u + v <= 1){
 			toReturn = true;
 			if(t < closestIntersection.distance ){
-				closestIntersection.position = x;
-				closestIntersection.distance = t;
+				closestIntersection.position = start+t*dir;
+				closestIntersection.distance = t*glm::length(dir);
 				closestIntersection.triangleIndex = i;
 			}
 		}
@@ -145,6 +155,17 @@ bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,I
 	return toReturn;
 }
 
+void ModifyRotationMatrix(float value){
+	R[0][0] = glm::cos(value);
+	R[0][1] = 0;
+	R[1][0] = 0;
+	R[1][1] = 1;
+	R[1][2] = 0;
+	R[2][1] = 0;
+	R[2][2] = glm::cos(value);
+	R[0][2] = glm::sin(value);
+	R[2][0] = -(glm::sin(value));
+}
 
 
 
