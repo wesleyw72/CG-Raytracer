@@ -136,7 +136,7 @@ void Draw()
 			vec3 d (xDiff, yDiff, focalLength);
 			vec3 color ( 0.0f,0.0f, 0.0f);
 			if(ClosestIntersection(cameraPos,d,triangles,closestIntersection)){
-				color = DirectLight(closestIntersection);
+				color = DirectLight(closestIntersection)*triangles[closestIntersection.triangleIndex].color;
 				//color = triangles[closestIntersection.triangleIndex].color;
 			}
 			PutPixelSDL( screen, x, y, color );
