@@ -19,13 +19,14 @@ vector<Triangle> triangles;
 int t;
 float focalLength = SCREEN_WIDTH/2;
 glm::mat3 R;
-float angle = 0.1f;
+float angle = 0.0f;
 float yaw = 0.1f;
 
 
 vec3 cameraPos( 0.f, 0.0f,-2.0f);
 vec3 lightPos( 0, -0.5, -0.7 );
-vec3 lightColor = 14.f * vec3( 1, 1, 1 );
+vec3 lightColor = 3.8f * vec3( 1, 1, 1 );
+vec3 indirectLight = 0.17f*vec3( 1, 1, 1 );
 
 /* ----------------------------------------------------------------------------*/
 /* STRUCTS                                                           */
@@ -72,6 +73,7 @@ vec3 DirectLight( const Intersection& i )
 			d = black;
 		}
 	}
+	d = lightColor * ( d + indirectLight);
 	return d;
 }
 int main( int argc, char* argv[] )
@@ -162,7 +164,6 @@ void Draw()
 			vec3 color ( 0.0f,0.0f, 0.0f);
 			if(ClosestIntersection(cameraPos,d,triangles,closestIntersection,-1)){
 				color = DirectLight(closestIntersection)*triangles[closestIntersection.triangleIndex].color;
-				//color = triangles[closestIntersection.triangleIndex].color;
 			}
 			PutPixelSDL( screen, x, y, color );
 		}
