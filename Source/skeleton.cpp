@@ -23,7 +23,7 @@ float angle = 0.0f;
 float yaw = 0.1f;
 
 
-vec3 cameraPos( 0.f, 0.0f,-2.0f);
+vec3 cameraPos( 0.f, 0.0f,-1.8f);
 vec3 lightPos( 0, -0.5, -0.7 );
 vec3 lightColor = 14.0f * vec3( 1, 1, 1 );
 vec3 indirectLight = 0.5f*vec3( 1, 1, 1 );
