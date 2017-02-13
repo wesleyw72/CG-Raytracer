@@ -23,7 +23,7 @@ float angle = 0.0f;
 float yaw = 0.1f;
 
 
-vec3 cameraPos( 0.f, 0.0f,-2.0f);
+vec3 cameraPos( 0.f, 0.0f,-1.8f);
 vec3 lightPos( 0, -0.5, -0.7 );
 vec3 lightColor = 14.0f * vec3( 1, 1, 1 );
 vec3 indirectLight = 0.5f*vec3( 1, 1, 1 );
@@ -45,6 +45,26 @@ void Update();
 void Draw();
 void ModifyRotationMatrix(float value);
 bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,Intersection& closestIntersection,int TriangleToIgnore);
+vec3 DirectLight( const Intersection& i );
+vec3 GetPixelColour(float x, float y);
+
+
+vec3 GetPixelColour(float x, float y){
+	float m = std::numeric_limits<float>::max();
+	closestIntersection.distance = m;
+	float xDiff = x - float(SCREEN_WIDTH/2);
+	float yDiff = y - float(SCREEN_HEIGHT/2);
+	vec3 d (xDiff, yDiff, focalLength);
+	d = R*d;
+	vec3 color ( 0.0f,0.0f, 0.0f);
+	if(ClosestIntersection(cameraPos,d,triangles,closestIntersection,-1)){
+		color = DirectLight(closestIntersection)*triangles[closestIntersection.triangleIndex].color;
+		color = triangles[closestIntersection.triangleIndex].color * ( color + indirectLight);
+	}
+	return color;
+}
+
+
 vec3 DirectLight( const Intersection& i )
 {
 	
@@ -156,15 +176,23 @@ void Draw()
 			float m = std::numeric_limits<float>::max();
 			closestIntersection.distance = m;
 
-			float xDiff = x - float(SCREEN_WIDTH/2);
-			float yDiff = y - float(SCREEN_HEIGHT/2);
-			vec3 d (xDiff, yDiff, focalLength);
-			d = R*d;
+
+			//Cast 4 rays for each pixel and average the value 
+			//(ANTI-ALIASING)
+			
+			float x1 = (x) - (0.25f);
+			float x2 = (x) + (0.25f);
+			float y1 = (y) - (0.25f);
+			float y2 = (y) + (0.25f);
 			vec3 color ( 0.0f,0.0f, 0.0f);
-			if(ClosestIntersection(cameraPos,d,triangles,closestIntersection,-1)){
-				color = DirectLight(closestIntersection)*triangles[closestIntersection.triangleIndex].color;
-				color = triangles[closestIntersection.triangleIndex].color * ( color + indirectLight);
-			}
+			color+= GetPixelColour(x1,y1);
+			color+= GetPixelColour(x1,y2);
+			color+= GetPixelColour(x2,y1);
+			color+= GetPixelColour(x2,y2);
+			color.x = color.x/4;
+			color.y = color.y/4;
+			color.z = color.z/4;
+
 			PutPixelSDL( screen, x, y, color );
 		}
 	}
@@ -192,7 +220,6 @@ bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,I
 		float t = x.x;
 		float u = x.y;
 		float v = x.z;
-
 
 		if( 0 <= t && 0 <= u && 0<= v && u + v <= 1){
 			if(t*glm::length(dir) < closestIntersection.distance && i!=TriangleToIgnore){
