@@ -215,13 +215,24 @@ bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,I
 		vec3 e2 = v2 - v0;
 		vec3 b = start - v0;
 		mat3 A( -dir, e1, e2 );
-		vec3 x = glm::inverse( A ) * b;
+
+		//vec3 x = glm::inverse( A ) * b;
+		vec3 p = dir*e2;
+		vec3 q = start * e1;
+		vec3 temp  = (q*e2,p*start,q*dir);
+		vec3 x = (1.0f/(p*e1))* temp;
 
 		float t = x.x;
 		float u = x.y;
 		float v = x.z;
+		// printf("%f ,  %f  , %f\n",t,u,v);
+		//  x = glm::inverse( A ) * b;
+		//  t = x.x;
+		//  u = x.y;
+		//  v = x.z;
+		// printf("right %f ,  %f  , %f\n",t,u,v);
 
-		if( 0 <= t && 0 <= u && 0<= v && u + v <= 1){
+		if( 0.0f <= t && 0.0f <= u && 0.0f<= v && u + v <= 1.0f){
 			if(t*glm::length(dir) < closestIntersection.distance && i!=TriangleToIgnore){
 				toReturn = true;
 				closestIntersection.position = start+t*dir;
