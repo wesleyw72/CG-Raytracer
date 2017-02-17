@@ -5,7 +5,7 @@
 
 #include <glm/glm.hpp>
 #include <vector>
-
+enum MaterialType { kDiffuse, kReflection, kReflectionAndRefraction }; 
 // Used to describe a triangular surface:
 class Triangle
 {
@@ -15,13 +15,20 @@ public:
 	glm::vec3 v2;
 	glm::vec3 normal;
 	glm::vec3 color;
+	MaterialType matType;
 
 	Triangle( glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec3 color )
 		: v0(v0), v1(v1), v2(v2), color(color)
 	{
+		matType =kDiffuse;
 		ComputeNormal();
 	}
-
+	Triangle( glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec3 color, MaterialType matType )
+		: v0(v0), v1(v1), v2(v2), color(color), matType(matType)
+	{
+		
+		ComputeNormal();
+	}
 	void ComputeNormal()
 	{
 		glm::vec3 e1 = v1-v0;
@@ -70,8 +77,8 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	triangles.push_back( Triangle( C, D, B, green ) );
 
 	// Left wall
-	triangles.push_back( Triangle( A, E, C, purple ) );
-	triangles.push_back( Triangle( C, E, G, purple ) );
+	triangles.push_back( Triangle( A, E, C, purple ,kReflection) );
+	triangles.push_back( Triangle( C, E, G, purple ,kReflection) );
 
 	// Right wall
 	triangles.push_back( Triangle( F, B, D, yellow ) );

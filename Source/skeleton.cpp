@@ -44,36 +44,61 @@ Intersection closestIntersection;
 void Update();
 void Draw();
 void ModifyRotationMatrix(float value);
+vec3 reflect(const vec3& I,const vec3& N);
 bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,Intersection& closestIntersection,int TriangleToIgnore);
-vec3 DirectLight( const Intersection& i )
+vec3 DirectLight( const Intersection& i,const vec3 &dir )
 {
-	
+	vec3 d;
 	//Calculate Vector to light source
-	vec3 r = lightPos - i.position;
-	float rL = glm::length(r);
-	r = glm::normalize(r);
-	vec3 norm = glm::normalize(triangles[i.triangleIndex].normal);
-	//Calculte dot product between normal and ray to light
-	float comp = glm::dot(r,norm);
-	comp = glm::max(0.0f,comp);
-	
-	//float temp = (float)(comp/ 4*PI*(rL*rL));
-	vec3 d = lightColor * ((float)(comp/ (4*PI*(rL*rL)))) ;
-	//Shadow
-	Intersection closestIntersection2;
-	float m = std::numeric_limits<float>::max();
-	closestIntersection2.distance = m;
-
-	bool cl = ClosestIntersection(i.position,r,triangles,closestIntersection2,i.triangleIndex);
-	if(cl)
+	switch(triangles[i.triangleIndex].matType)
 	{
-		if(closestIntersection2.distance<rL)
+		
+		case kDiffuse:
 		{
-			vec3 black(0.0f,0.0f,0.0f);
-			d = black;
+			vec3 r = lightPos - i.position;
+			float rL = glm::length(r);
+			r = glm::normalize(r);
+			vec3 norm = glm::normalize(triangles[i.triangleIndex].normal);
+			//Calculte dot product between normal and ray to light
+			float comp = glm::dot(r,norm);
+			comp = glm::max(0.0f,comp);
+			
+			//float temp = (float)(comp/ 4*PI*(rL*rL));
+			d = lightColor * ((float)(comp/ (4*PI*(rL*rL)))) ;
+			//Shadow
+			Intersection closestIntersection2;
+			float m = std::numeric_limits<float>::max();
+			closestIntersection2.distance = m;
+
+			bool cl = ClosestIntersection(i.position,r,triangles,closestIntersection2,i.triangleIndex);
+			if(cl)
+			{
+				if(closestIntersection2.distance<rL)
+				{
+					//cast shadow
+					vec3 black(0.0f,0.0f,0.0f);
+					d = black;
+				}
+			}
+			//Return colour of direct light
+			break;
 		}
+		case kReflection:
+		{
+			Vec3f R = reflect(dir, hitNormal); 
+			hitColor += 0.8 * castRay(hitPoint + hitNormal * options.bias, R, objects, lights, options, depth + 1);
+			//Return colour of direct light
+			break;
+		}
+
+
 	}
 	return d;
+	
+}
+vec3 reflect(const vec3& I,const vec3& N)
+{
+	return I - 2 * glm::dot(I,N)*N;
 }
 int main( int argc, char* argv[] )
 {
@@ -194,7 +219,7 @@ bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,I
 		float v = x.z;
 
 
-		if( 0 <= t && 0 <= u && 0<= v && u + v <= 1){
+		if( 0.0f <= t && 0.0f <= u && 0.0f<= v && u + v <= 1.0f){
 			if(t*glm::length(dir) < closestIntersection.distance && i!=TriangleToIgnore){
 				toReturn = true;
 				closestIntersection.position = start+t*dir;
