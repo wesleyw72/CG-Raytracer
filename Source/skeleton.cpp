@@ -21,11 +21,10 @@ float focalLength = SCREEN_WIDTH/2;
 glm::mat3 R;
 float angle = 0.0f;
 float yaw = 0.1f;
-
+std::vector<pointLight*> lights;
 
 vec3 cameraPos( 0.f, 0.0f,-1.8f);
-vec3 lightPos( 0, -0.5, -0.7 );
-vec3 lightColor = 14.0f * vec3( 1, 1, 1 );
+
 vec3 indirectLight = 0.5f*vec3( 1, 1, 1 );
 
 /* ----------------------------------------------------------------------------*/
@@ -46,56 +45,56 @@ void Draw();
 void ModifyRotationMatrix(float value);
 vec3 reflect(const vec3& I,const vec3& N);
 bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,Intersection& closestIntersection,int TriangleToIgnore);
-vec3 DirectLight( const Intersection& i,const vec3 &dir,int depth )
-{
-	vec3 d;
-	//Calculate Vector to light source
-	switch(triangles[i.triangleIndex].matType)
-	{
+// vec3 DirectLight( const Intersection& i,const vec3 &dir,int depth )
+// {
+// 	vec3 d;
+// 	//Calculate Vector to light source
+// 	switch(triangles[i.triangleIndex].matType)
+// 	{
 		
-		case kDiffuse:
-		{
-			vec3 r = -lightPos + i.position;
-			float rL = glm::length(r);
-			r = glm::normalize(r);
-			vec3 norm = glm::normalize(triangles[i.triangleIndex].normal);
-			//Calculte dot product between normal and ray to light
-			float comp = glm::dot(r,norm);
-			comp = glm::max(0.0f,comp);
+// 		case kDiffuse:
+// 		{
+// 			vec3 r = -lightPos + i.position;
+// 			float rL = glm::length(r);
+// 			r = glm::normalize(r);
+// 			vec3 norm = glm::normalize(triangles[i.triangleIndex].normal);
+// 			//Calculte dot product between normal and ray to light
+// 			float comp = glm::dot(r,norm);
+// 			comp = glm::max(0.0f,comp);
 			
-			//float temp = (float)(comp/ 4*PI*(rL*rL));
-			d = lightColor * ((float)(comp/ (4*PI*(rL*rL)))) ;
-			//Shadow
-			Intersection closestIntersection2;
-			float m = std::numeric_limits<float>::max();
-			closestIntersection2.distance = m;
+// 			//float temp = (float)(comp/ 4*PI*(rL*rL));
+// 			d = lightColor * ((float)(comp/ (4*PI*(rL*rL)))) ;
+// 			//Shadow
+// 			Intersection closestIntersection2;
+// 			float m = std::numeric_limits<float>::max();
+// 			closestIntersection2.distance = m;
 
-			bool cl = ClosestIntersection(i.position,r,triangles,closestIntersection2,i.triangleIndex);
-			if(cl)
-			{
-				if(closestIntersection2.distance<rL)
-				{
-					//cast shadow
-					vec3 black(0.0f,0.0f,0.0f);
-					d = black;
-				}
-			}
-			//Return colour of direct light
-			break;
-		}
-		// case kReflection:
-		// {
-		// 	Vec3 R = reflect(dir, triangles[i.triangleIndex].normal); 
-		// 	hitColor += 0.8 * DirectLight(i.position + triangles[i.triangleIndex].normal, R, objects, lights, options, depth + 1);
-		// 	//Return colour of direct light
-		// 	break;
-		// }
+// 			bool cl = ClosestIntersection(i.position,r,triangles,closestIntersection2,i.triangleIndex);
+// 			if(cl)
+// 			{
+// 				if(closestIntersection2.distance<rL)
+// 				{
+// 					//cast shadow
+// 					vec3 black(0.0f,0.0f,0.0f);
+// 					d = black;
+// 				}
+// 			}
+// 			//Return colour of direct light
+// 			break;
+// 		}
+// 		// case kReflection:
+// 		// {
+// 		// 	Vec3 R = reflect(dir, triangles[i.triangleIndex].normal); 
+// 		// 	hitColor += 0.8 * DirectLight(i.position + triangles[i.triangleIndex].normal, R, objects, lights, options, depth + 1);
+// 		// 	//Return colour of direct light
+// 		// 	break;
+// 		// }
 
 
-	}
-	return d;
+// 	}
+// 	return d;
 	
-}
+// }
 vec3 CastRay(const vec3& origin,const vec3& dir,const int depth,const int TriangleToIgnore=-1)
 {
 	//Check if depth has been exceeded
@@ -116,28 +115,30 @@ vec3 CastRay(const vec3& origin,const vec3& dir,const int depth,const int Triang
 		{
 			case kDiffuse:
 			{
-				pointLight testLight;
-				vec3 r = lightPos - closestIntersection.position;
-				float rL = glm::length(r);
-				r = glm::normalize(r);
-				vec3 norm = glm::normalize(triangles[closestIntersection.triangleIndex].normal);
-			//Calculte dot product between normal and ray to light
-				float comp = glm::dot(r,norm);
-				comp = glm::max(0.0f,comp);
-				d = lightColor * ((float)(comp/ (4*PI*(rL*rL)))) * triangles[closestIntersection.triangleIndex].color;
-			//Shadow
-				Intersection closestIntersection2;
-				float m = std::numeric_limits<float>::max();
-				closestIntersection2.distance = m;
-
-				bool cl = ClosestIntersection(closestIntersection.position,r,triangles,closestIntersection2,closestIntersection.triangleIndex);
-				if(cl)
-				{
-					if(closestIntersection2.distance<rL)
+				//pointLight testLight(lightPos,lightColor,14);
+				for (uint32_t i = 0; i < lights.size(); ++i) { 
+					vec3 dir;
+					float rL;
+					vec3 pLi;
+					vec3 norm = glm::normalize(triangles[closestIntersection.triangleIndex].normal);
+					lights[i]->illuminate(closestIntersection.position,dir,pLi,norm,rL);
+					pLi = pLi* triangles[closestIntersection.triangleIndex].color;
+					Intersection closestIntersection2;
+					float m = std::numeric_limits<float>::max();
+					closestIntersection2.distance = m;
+					bool vis = true;
+				//Shadow Code
+					if(ClosestIntersection(closestIntersection.position,dir,triangles,closestIntersection2,closestIntersection.triangleIndex))
 					{
-					//cast shadow
-						//vec3 black(0.0f,0.0f,0.0f);
-						d = black;
+						if(closestIntersection2.distance<rL)
+						{
+							vis = false;
+						//d = black;
+						}
+					}
+					if(vis)
+					{
+						d += pLi;
 					}
 				}
 				break;
@@ -154,8 +155,22 @@ vec3 reflect(const vec3& I,const vec3& N)
 {
 	return I - 2 * glm::dot(I,N)*N;
 }
+void makeLights()
+{	
+
+	vec3 lightPos( 0, -0.5, -0.7 );
+	vec3 lightColor =  vec3( 1, 1, 1);
+	
+	lights.push_back(new pointLight(lightPos, lightColor, 14));
+	 // std::vector<pointLight&> lights;
+	 
+	 // pointLight& temp = new pointLight(lightPos,lightColor,14);
+	 // lights.push_back(temp);
+
+}
 int main( int argc, char* argv[] )
 {
+	makeLights();
 	screen = InitializeSDL( SCREEN_WIDTH, SCREEN_HEIGHT );
 	t = SDL_GetTicks();	// Set start value for timer.
 	LoadTestModel( triangles );
@@ -209,18 +224,18 @@ void Update()
 		
 	}
 
-	if( keystate[SDLK_w] )
-		lightPos += Vforward;
-	if( keystate[SDLK_s] )
-		lightPos -= Vforward;
-	if( keystate[SDLK_d] )
-		lightPos += Vright;
-	if( keystate[SDLK_a] )
-		lightPos -= Vright;
-	if( keystate[SDLK_q] )
-		lightPos += Vup;
-	if( keystate[SDLK_e] )
-		lightPos -= Vup;
+	// if( keystate[SDLK_w] )
+	// 	lightPos += Vforward;
+	// if( keystate[SDLK_s] )
+	// 	lightPos -= Vforward;
+	// if( keystate[SDLK_d] )
+	// 	lightPos += Vright;
+	// if( keystate[SDLK_a] )
+	// 	lightPos -= Vright;
+	// if( keystate[SDLK_q] )
+	// 	lightPos += Vup;
+	// if( keystate[SDLK_e] )
+	// 	lightPos -= Vup;
 }
 
 void Draw()
