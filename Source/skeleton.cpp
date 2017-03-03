@@ -22,7 +22,7 @@ glm::mat3 R;
 float angle = 0.0f;
 float yaw = 0.1f;
 std::vector<pointLight*> lights;
-
+int currentlySelectedLight = 0;
 vec3 cameraPos( 0.f, 0.0f,-1.8f);
 
 vec3 indirectLight = 0.5f*vec3( 1, 1, 1 );
@@ -155,6 +155,13 @@ vec3 reflect(const vec3& I,const vec3& N)
 {
 	return I - 2 * glm::dot(I,N)*N;
 }
+void cycleSelectedLight()
+{
+
+	currentlySelectedLight++;
+	currentlySelectedLight = currentlySelectedLight % lights.size();
+	cout<<"NEW LIGHT: "<<currentlySelectedLight;
+}
 void makeLights()
 {	
 
@@ -162,6 +169,7 @@ void makeLights()
 	vec3 lightColor =  vec3( 1, 1, 1);
 	vec3 lightPos( 0, -0.5, -0.7 );
 	lights.push_back(new pointLight(lightPos, lightColor, 14));
+	currentlySelectedLight=0;
 	lightColor =  vec3( 1, 1, 1);
 	lightPos = vec3( 0, -0.5, -0.7 );
 	lights.push_back(new pointLight(lightPos, lightColor, 14));
@@ -228,26 +236,28 @@ void Update()
 	}
 	glm::vec3 neg(-1,-1,-1);
 	if( keystate[SDLK_w] )
-		lights[0]->displacePosition(Vforward);
+		lights[currentlySelectedLight]->displacePosition(Vforward);
 	if( keystate[SDLK_s] )
 	{
 		vec3 neg2 = neg*Vforward;
-		lights[0]->displacePosition(neg2);
+		lights[currentlySelectedLight]->displacePosition(neg2);
 	}
 	if( keystate[SDLK_d] )
-		lights[0]->displacePosition(Vright);
+		lights[currentlySelectedLight]->displacePosition(Vright);
 	if( keystate[SDLK_a] )
 	{
 		vec3 neg2 = neg*Vright;
-		lights[0]->displacePosition(neg2);
+		lights[currentlySelectedLight]->displacePosition(neg2);
 	}
 	if( keystate[SDLK_q] )
-		lights[0]->displacePosition(Vup);
+		lights[currentlySelectedLight]->displacePosition(Vup);
 	if( keystate[SDLK_e] )
 	{
 		vec3 neg2 = neg*Vup;
-		lights[0]->displacePosition(neg2);
+		lights[currentlySelectedLight]->displacePosition(neg2);
 	}
+	if( keystate[SDLK_r] )
+		cycleSelectedLight();
 }
 
 void Draw()
