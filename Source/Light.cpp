@@ -7,6 +7,13 @@ class Light
 		virtual void illuminate (const glm::vec3 &refPoint,glm::vec3 &dir,glm::vec3 &Lightinten,glm::vec3 normal,float &rL) = 0;
 		glm::vec3 position;
 		glm::vec3 color;
+		void updatePosition(glm::vec3 &newPos) {
+			position=newPos;
+		}
+		void displacePosition(glm::vec3 &displace)
+		{
+			position+=displace;
+		}
 
 		float intensity;
 };

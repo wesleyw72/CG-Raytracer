@@ -158,9 +158,12 @@ vec3 reflect(const vec3& I,const vec3& N)
 void makeLights()
 {	
 
-	vec3 lightPos( 0, -0.5, -0.7 );
+	//vec3 lightPos( 0, -0.5, -0.7 );
 	vec3 lightColor =  vec3( 1, 1, 1);
-	
+	vec3 lightPos( 0, -0.5, -0.7 );
+	lights.push_back(new pointLight(lightPos, lightColor, 14));
+	lightColor =  vec3( 1, 1, 1);
+	lightPos = vec3( 0, -0.5, -0.7 );
 	lights.push_back(new pointLight(lightPos, lightColor, 14));
 	 // std::vector<pointLight&> lights;
 	 
@@ -223,19 +226,28 @@ void Update()
 		cameraPos = R * cameraPos;
 		
 	}
-
-	// if( keystate[SDLK_w] )
-	// 	lightPos += Vforward;
-	// if( keystate[SDLK_s] )
-	// 	lightPos -= Vforward;
-	// if( keystate[SDLK_d] )
-	// 	lightPos += Vright;
-	// if( keystate[SDLK_a] )
-	// 	lightPos -= Vright;
-	// if( keystate[SDLK_q] )
-	// 	lightPos += Vup;
-	// if( keystate[SDLK_e] )
-	// 	lightPos -= Vup;
+	glm::vec3 neg(-1,-1,-1);
+	if( keystate[SDLK_w] )
+		lights[0]->displacePosition(Vforward);
+	if( keystate[SDLK_s] )
+	{
+		vec3 neg2 = neg*Vforward;
+		lights[0]->displacePosition(neg2);
+	}
+	if( keystate[SDLK_d] )
+		lights[0]->displacePosition(Vright);
+	if( keystate[SDLK_a] )
+	{
+		vec3 neg2 = neg*Vright;
+		lights[0]->displacePosition(neg2);
+	}
+	if( keystate[SDLK_q] )
+		lights[0]->displacePosition(Vup);
+	if( keystate[SDLK_e] )
+	{
+		vec3 neg2 = neg*Vup;
+		lights[0]->displacePosition(neg2);
+	}
 }
 
 void Draw()
