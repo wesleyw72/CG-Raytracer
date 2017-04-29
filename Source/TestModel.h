@@ -16,17 +16,19 @@ public:
 	glm::vec3 normal;
 	glm::vec3 color;
 	MaterialType matType;
+	float ior;
 
 	Triangle( glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec3 color )
 		: v0(v0), v1(v1), v2(v2), color(color)
 	{
 		matType =kDiffuse;
+		ior = 1.9f;
 		ComputeNormal();
 	}
 	Triangle( glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec3 color, MaterialType matType )
 		: v0(v0), v1(v1), v2(v2), color(color), matType(matType)
 	{
-		
+		ior = 1.9f;
 		ComputeNormal();
 	}
 	void ComputeNormal()
@@ -34,6 +36,26 @@ public:
 		glm::vec3 e1 = v1-v0;
 		glm::vec3 e2 = v2-v0;
 		normal = glm::normalize( glm::cross( e2, e1 ) );
+	}
+	bool intersect(glm::vec3 start,glm::vec3 dir,float * t)
+	{
+		glm::vec3 e1 = v1 - v0;
+		glm::vec3 e2 = v2 - v0;
+		glm::vec3 b = start - v0;
+		glm::mat3 A( -dir, e1, e2 );
+		glm::vec3 x = glm::inverse( A ) * b;
+
+		*t = x.x;
+		//std::cout << ("T: %f",*t);
+		float u = x.y;
+		float v = x.z;
+		if( 0.0f <= *t && 0.0f <= u && 0.0f<= v && u + v <= 1.0f){
+			
+			return true;
+
+		}
+		//determine if a ray intersects with this triangle.
+
 	}
 };
 
@@ -77,8 +99,10 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	triangles.push_back( Triangle( C, D, B, green ) );
 
 	// Left wall
-	triangles.push_back( Triangle( A, E, C, purple ,kReflection) );
-	triangles.push_back( Triangle( C, E, G, purple ,kReflection) );
+	// triangles.push_back( Triangle( A, E, C, purple ,kReflection) );
+	// triangles.push_back( Triangle( C, E, G, purple ,kReflection) );
+	triangles.push_back( Triangle( A, E, C, purple ) );
+	triangles.push_back( Triangle( C, E, G, purple ) );
 
 	// Right wall
 	triangles.push_back( Triangle( F, B, D, yellow ) );
@@ -139,24 +163,24 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	H = vec3(314,330,456);
 
 	// Front
-	triangles.push_back( Triangle(E,B,A,blue) );
-	triangles.push_back( Triangle(E,F,B,blue) );
+	triangles.push_back( Triangle(E,B,A,blue,kReflectionAndRefraction) );
+	triangles.push_back( Triangle(E,F,B,blue,kReflectionAndRefraction) );
 
 	// Front
-	triangles.push_back( Triangle(F,D,B,blue) );
-	triangles.push_back( Triangle(F,H,D,blue) );
+	triangles.push_back( Triangle(F,D,B,blue,kReflectionAndRefraction) );
+	triangles.push_back( Triangle(F,H,D,blue,kReflectionAndRefraction) );
 
 	// BACK
-	triangles.push_back( Triangle(H,C,D,blue) );
-	triangles.push_back( Triangle(H,G,C,blue) );
+	triangles.push_back( Triangle(H,C,D,blue,kReflectionAndRefraction) );
+	triangles.push_back( Triangle(H,G,C,blue,kReflectionAndRefraction) );
 
 	// LEFT
-	triangles.push_back( Triangle(G,E,C,blue) );
-	triangles.push_back( Triangle(E,A,C,blue) );
+	triangles.push_back( Triangle(G,E,C,blue,kReflectionAndRefraction) );
+	triangles.push_back( Triangle(E,A,C,blue,kReflectionAndRefraction) );
 
 	// TOP
-	triangles.push_back( Triangle(G,F,E,blue) );
-	triangles.push_back( Triangle(G,H,F,blue) );
+	triangles.push_back( Triangle(G,F,E,blue,kReflectionAndRefraction) );
+	triangles.push_back( Triangle(G,H,F,blue,kReflectionAndRefraction) );
 
 
 	// ----------------------------------------------
