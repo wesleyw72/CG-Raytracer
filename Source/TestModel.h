@@ -54,6 +54,7 @@ public:
 			return true;
 
 		}
+		return false;
 		//determine if a ray intersects with this triangle.
 
 	}

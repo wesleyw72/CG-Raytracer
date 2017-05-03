@@ -364,41 +364,11 @@ void Draw()
 
 bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,Intersection& closestIntersection,int TriangleToIgnore){
 	 bool toReturn = false;
-
-	// for(int i = 0; i < triangles.size() ; i ++){
-	// 	Triangle triangle = triangles[i];
-	// 	float t;
-	// 	if(triangle.intersect(start,dir,&t))
-	// 	{
-	// 		if(t*glm::length(dir) < closestIntersection.distance && i!=TriangleToIgnore)
-	// 		{
-	// 			toReturn = true;
-	// 			closestIntersection.position = start+t*dir;
-	// 			closestIntersection.distance = t*glm::length(dir); //length of dir
-	// 			closestIntersection.triangleIndex = i;
-	// 		}
-	// 	}
-
-		
-	// }
-	// return toReturn;
 	for(int i = 0; i < triangles.size() ; i ++){
 		Triangle triangle = triangles[i];
-		vec3 v0 = triangle.v0;
-		vec3 v1 = triangle.v1;
-		vec3 v2 = triangle.v2;
-		vec3 e1 = v1 - v0;
-		vec3 e2 = v2 - v0;
-		vec3 b = start - v0;
-		mat3 A( -dir, e1, e2 );
-		vec3 x = glm::inverse( A ) * b;
-
-		float t = x.x;
-		float u = x.y;
-		float v = x.z;
-
-
-		if( 0 <= t && 0 <= u && 0<= v && u + v <= 1){
+		float t;
+		triangle.intersect(start,dir,&t);
+		if(triangle.intersect(start,dir,&t)){
 			if(t*glm::length(dir) < closestIntersection.distance && i!=TriangleToIgnore){
 				toReturn = true;
 				closestIntersection.position = start+t*dir;
