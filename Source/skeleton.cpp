@@ -16,7 +16,7 @@ using glm::mat3;
 const int SCREEN_WIDTH = 500;
 const int SCREEN_HEIGHT = 500;
 SDL_Surface* screen;
-vector<Triangle> triangles;
+vector<Triangle*> triangles;
 int t;
 float focalLength = SCREEN_WIDTH/2;
 glm::mat3 R;
@@ -26,7 +26,7 @@ std::vector<pointLight*> lights;
 int currentlySelectedLight = 0;
 vec3 cameraPos( 0.f, 0.0f,-1.8f);
 
-vec3 indirectLight = 0.5f*vec3( 1, 1, 1 );
+vec3 indirectLight = 0.1f*vec3( 1, 1, 1 );
 
 /* ----------------------------------------------------------------------------*/
 /* STRUCTS                                                           */
@@ -38,64 +38,13 @@ struct Intersection
 };
 
 Intersection closestIntersection;
-
 /* ----------------------------------------------------------------------------*/
 /* FUNCTIONS                                                                   */
 void Update();
 void Draw();
 void ModifyRotationMatrix(float value);
 vec3 reflect(const vec3& I,const vec3& N);
-bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,Intersection& closestIntersection,int TriangleToIgnore);
-// vec3 DirectLight( const Intersection& i,const vec3 &dir,int depth )
-// {
-// 	vec3 d;
-// 	//Calculate Vector to light source
-// 	switch(triangles[i.triangleIndex].matType)
-// 	{
-		
-// 		case kDiffuse:
-// 		{
-// 			vec3 r = -lightPos + i.position;
-// 			float rL = glm::length(r);
-// 			r = glm::normalize(r);
-// 			vec3 norm = glm::normalize(triangles[i.triangleIndex].normal);
-// 			//Calculte dot product between normal and ray to light
-// 			float comp = glm::dot(r,norm);
-// 			comp = glm::max(0.0f,comp);
-			
-// 			//float temp = (float)(comp/ 4*PI*(rL*rL));
-// 			d = lightColor * ((float)(comp/ (4*PI*(rL*rL)))) ;
-// 			//Shadow
-// 			Intersection closestIntersection2;
-// 			float m = std::numeric_limits<float>::max();
-// 			closestIntersection2.distance = m;
-
-// 			bool cl = ClosestIntersection(i.position,r,triangles,closestIntersection2,i.triangleIndex);
-// 			if(cl)
-// 			{
-// 				if(closestIntersection2.distance<rL)
-// 				{
-// 					//cast shadow
-// 					vec3 black(0.0f,0.0f,0.0f);
-// 					d = black;
-// 				}
-// 			}
-// 			//Return colour of direct light
-// 			break;
-// 		}
-// 		// case kReflection:
-// 		// {
-// 		// 	Vec3 R = reflect(dir, triangles[i.triangleIndex].normal); 
-// 		// 	hitColor += 0.8 * DirectLight(i.position + triangles[i.triangleIndex].normal, R, objects, lights, options, depth + 1);
-// 		// 	//Return colour of direct light
-// 		// 	break;
-// 		// }
-
-
-// 	}
-// 	return d;
-	
-// }
+bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle*>& triangles,Intersection& closestIntersection,int TriangleToIgnore);
 void fresnel(const vec3& I,const vec3& N,const float& ior,float &kr)
 {
 	float cosi = glm::clamp(glm::dot(I,N),-1.0f,1.0f);
@@ -116,8 +65,6 @@ void fresnel(const vec3& I,const vec3& N,const float& ior,float &kr)
         float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost)); 
         kr = (Rs * Rs + Rp * Rp) / 2; 
     } 
-
-
 }
 vec3 refract(const vec3& I, const vec3& N, const float& ior)
 {
@@ -156,7 +103,7 @@ vec3 CastRay(const vec3& origin,const vec3& dir,const int depth,const int Triang
 		return d;
 	if(ClosestIntersection(origin,dir,triangles,closestIntersection,-1))
 	{
-		switch(triangles[closestIntersection.triangleIndex].matType)
+		switch(triangles[closestIntersection.triangleIndex]->matType)
 		{
 			case kDiffuse:
 			{
@@ -165,9 +112,9 @@ vec3 CastRay(const vec3& origin,const vec3& dir,const int depth,const int Triang
 					vec3 dir;
 					float rL;
 					vec3 pLi;
-					vec3 norm = glm::normalize(triangles[closestIntersection.triangleIndex].normal);
+					vec3 norm = glm::normalize(triangles[closestIntersection.triangleIndex]->GetNormal(closestIntersection.position));
 					lights[i]->illuminate(closestIntersection.position,dir,pLi,norm,rL);
-					pLi = pLi* triangles[closestIntersection.triangleIndex].color;
+					pLi = (pLi+indirectLight)* triangles[closestIntersection.triangleIndex]->color;
 					Intersection closestIntersection2;
 					float m = std::numeric_limits<float>::max();
 					closestIntersection2.distance = m;
@@ -177,23 +124,21 @@ vec3 CastRay(const vec3& origin,const vec3& dir,const int depth,const int Triang
 					{
 						if(closestIntersection2.distance<rL)
 						{
-							// if(triangles[closestIntersection2.triangleIndex].matType==kReflectionAndRefraction)
 							vis = true;
-						//d = black;
 						}
 					}
 					if(vis)
 					{
 						d += pLi;
 					}
+
 					vec3 ambientLight(1.0f,1.0f,1.0f);
-					//d+= 0.5f*ambientLight;
 				}
 				break;
 			}
 			case kReflection:
 			{
-				vec3 R = reflect(dir,triangles[closestIntersection.triangleIndex].normal);
+				vec3 R = reflect(dir,triangles[closestIntersection.triangleIndex]->GetNormal(closestIntersection.position));
 				vec3 neight(0.6f,0.6f,0.6f);
 				d += neight * CastRay(closestIntersection.position+0.0000001f*R, R,depth+1,-1);
 				break;
@@ -202,15 +147,15 @@ vec3 CastRay(const vec3& origin,const vec3& dir,const int depth,const int Triang
 			{
 				vec3 refractionColor(0.0f,0.0f,0.0f);
 				float kr;
-				fresnel(dir, triangles[closestIntersection.triangleIndex].normal, triangles[closestIntersection.triangleIndex].ior, kr); 
-				bool outside = glm::dot(dir,triangles[closestIntersection.triangleIndex].normal)<0;
-				vec3 bias = 0.00001f * triangles[closestIntersection.triangleIndex].normal;
+				fresnel(dir, triangles[closestIntersection.triangleIndex]->GetNormal(closestIntersection.position), triangles[closestIntersection.triangleIndex]->ior, kr); 
+				bool outside = glm::dot(dir,triangles[closestIntersection.triangleIndex]->GetNormal(closestIntersection.position))<0;
+				vec3 bias = 0.00001f * triangles[closestIntersection.triangleIndex]->GetNormal(closestIntersection.position);
 				if (kr < 1) { 
-					vec3 refractionDirection = glm::normalize(refract(dir, triangles[closestIntersection.triangleIndex].normal, triangles[closestIntersection.triangleIndex].ior)); 
+					vec3 refractionDirection = glm::normalize(refract(dir, triangles[closestIntersection.triangleIndex]->GetNormal(closestIntersection.position), triangles[closestIntersection.triangleIndex]->ior)); 
 					vec3 refractionRayOrig = outside ? closestIntersection.position - bias : closestIntersection.position + bias; 
 					refractionColor = CastRay(refractionRayOrig, refractionDirection, depth + 1,-1); 
 				} 
-				vec3 reflectionDirection = glm::normalize(reflect(dir, triangles[closestIntersection.triangleIndex].normal)); 
+				vec3 reflectionDirection = glm::normalize(reflect(dir, triangles[closestIntersection.triangleIndex]->GetNormal(closestIntersection.position))); 
         		vec3 reflectionRayOrig = outside ? closestIntersection.position + bias : closestIntersection.position - bias; 
         		vec3 reflectionColor = CastRay(reflectionRayOrig, reflectionDirection, depth + 1,-1); 
         		d += reflectionColor * kr + refractionColor * (1 - kr); 
@@ -226,7 +171,6 @@ vec3 reflect(const vec3& I,const vec3& N)
 }
 void cycleSelectedLight()
 {
-
 	currentlySelectedLight++;
 	currentlySelectedLight = currentlySelectedLight % lights.size();
 	cout<<"NEW LIGHT: "<<currentlySelectedLight;
@@ -234,18 +178,13 @@ void cycleSelectedLight()
 void makeLights()
 {	
 
-	//vec3 lightPos( 0, -0.5, -0.7 );
-	vec3 lightColor =  vec3( 1, 1, 1);
-	vec3 lightPos( 0, -0.5, -0.7 );
-	lights.push_back(new pointLight(lightPos, lightColor, 14));
+	vec3 lightColor =  vec3( 1, 0.77, 0.56);
+	vec3 lightPos( 0, -0.6, 0.2 );
+	lights.push_back(new pointLight(lightPos, lightColor, 9));
 	currentlySelectedLight=0;
-	lightColor =  vec3( 1, 1, 1);
+	lightColor =  vec3( 1, 0.77, 0.56);
 	lightPos = vec3( 0, -0.5, -0.7 );
-	//lights.push_back(new pointLight(lightPos, lightColor, 14));
-	 // std::vector<pointLight&> lights;
-	 
-	 // pointLight& temp = new pointLight(lightPos,lightColor,14);
-	 // lights.push_back(temp);
+	lights.push_back(new pointLight(lightPos, lightColor, 3));
 
 }
 int main( int argc, char* argv[] )
@@ -253,16 +192,16 @@ int main( int argc, char* argv[] )
 	makeLights();
 	screen = InitializeSDL( SCREEN_WIDTH, SCREEN_HEIGHT );
 	t = SDL_GetTicks();	// Set start value for timer.
+	// std::vector<Triangle> tris;
 	LoadTestModel( triangles );
+	// triangles.insert(tris.end(), tris.begin(), tris.end());
 	cout << triangles.size() << endl;
 	ModifyRotationMatrix(angle);
 	while( NoQuitMessageSDL() )
 	{
 		Update();
 		Draw();
-		
 	}
-
 	SDL_SaveBMP( screen, "screenshot.bmp" );
 	return 0;
 }
@@ -277,7 +216,6 @@ void Update()
 	float dt = float(t2-t);
 	t = t2;
 	cout << "Render time: " << dt << " ms." << endl;
-
 	Uint8* keystate = SDL_GetKeyState( 0 );
 	if( keystate[SDLK_UP] )
 	{
@@ -328,7 +266,19 @@ void Update()
 	if( keystate[SDLK_r] )
 		cycleSelectedLight();
 }
+vec3 GetPixelColour(float x, float y)
+{
+	float m = std::numeric_limits<float>::max();
+	closestIntersection.distance = m;
 
+	float xDiff = x - float(SCREEN_WIDTH/2);
+	float yDiff = y - float(SCREEN_HEIGHT/2);
+	vec3 d (xDiff, yDiff, focalLength);
+	d = R*d;
+	vec3 color ( 0.0f,0.0f, 0.0f);
+	color = CastRay(cameraPos,d,0,-1);
+	return color;
+}
 void Draw()
 {
 	if( SDL_MUSTLOCK(screen) )
@@ -339,19 +289,18 @@ void Draw()
 	{
 		for( int x=0; x<SCREEN_WIDTH; ++x )
 		{
-			float m = std::numeric_limits<float>::max();
-			closestIntersection.distance = m;
-
-			float xDiff = x - float(SCREEN_WIDTH/2);
-			float yDiff = y - float(SCREEN_HEIGHT/2);
-			vec3 d (xDiff, yDiff, focalLength);
-			d = R*d;
+			float x1 = (x) - (0.25f);
+			float x2 = (x) + (0.25f);
+			float y1 = (y) - (0.25f);
+			float y2 = (y) + (0.25f);
 			vec3 color ( 0.0f,0.0f, 0.0f);
-			color = CastRay(cameraPos,d,0,-1);
-			// if(ClosestIntersection(cameraPos,d,triangles,closestIntersection,-1)){
-			// 	// color = DirectLight(closestIntersection)*triangles[closestIntersection.triangleIndex].color;
-			// 	// color = triangles[closestIntersection.triangleIndex].color * ( color + indirectLight);
-			// }
+			color+= GetPixelColour(x1,y1);
+			color+= GetPixelColour(x1,y2);
+			color+= GetPixelColour(x2,y1);
+			color+= GetPixelColour(x2,y2);
+			color.x = color.x/4;
+			color.y = color.y/4;
+			color.z = color.z/4;
 			PutPixelSDL( screen, x, y, color );
 		}
 	}
@@ -362,13 +311,13 @@ void Draw()
 	SDL_UpdateRect( screen, 0, 0, 0, 0 );
 }
 
-bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle>& triangles,Intersection& closestIntersection,int TriangleToIgnore){
+bool ClosestIntersection(vec3 start,vec3 dir,const vector<Triangle*>& triangles,Intersection& closestIntersection,int TriangleToIgnore){
 	 bool toReturn = false;
 	for(int i = 0; i < triangles.size() ; i ++){
-		Triangle triangle = triangles[i];
+		Triangle* triangle = triangles[i];
 		float t;
-		triangle.intersect(start,dir,&t);
-		if(triangle.intersect(start,dir,&t)){
+		triangle->intersect(start,dir,&t);
+		if(triangle->intersect(start,dir,&t)){
 			if(t*glm::length(dir) < closestIntersection.distance && i!=TriangleToIgnore){
 				toReturn = true;
 				closestIntersection.position = start+t*dir;

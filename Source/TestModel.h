@@ -6,8 +6,78 @@
 #include <glm/glm.hpp>
 #include <vector>
 enum MaterialType { kDiffuse, kReflection, kReflectionAndRefraction }; 
+class Shape
+{
+public:
+	glm::vec3 color;
+	MaterialType matType;
+	float ior;
+	virtual glm::vec3 GetNormal(glm::vec3 intersectPoint) =0;
+	virtual bool intersect(glm::vec3 start,glm::vec3 dir,float *t)=0;
+};
+class Sphere
+{
+	glm::vec3 centre;
+	float radius;
+	bool quadSolver(float a,float b,float c, float &x0,float &x1)
+	{
+		float discrim = b * b - 4 * a * c;
+		if(discrim<0) return false;
+		else if (discrim==0)
+		{
+			x0 = -0.5* b/a;
+			x1 = -0.5* b/a;
+
+		}
+		else
+		{
+			float q;
+			if(b>0)
+			{
+				q = -0.5 * (b + sqrt(discrim));
+			}
+			else
+			{
+				q = -0.5 * (b - sqrt(discrim));
+			}
+			x0 = q/a;
+			x1 = c/q;
+
+		}
+		if (x0>x1) std::swap(x0,x1);
+		return true;
+	}
+public:
+	glm::vec3 color;
+	MaterialType matType;
+	Sphere(glm::vec3 centre,float radius) : centre(centre),radius(radius)
+	{
+
+	}
+	glm::vec3 GetNormal(glm::vec3 intersectPoint)
+	{
+		return glm::normalize(intersectPoint-centre);
+	}
+	bool intersect(glm::vec3 start,glm::vec3 dir,float *t)
+	{
+		glm::vec3 L = start - centre;
+		float a = glm::dot(dir,dir);
+		float b = 2* glm::dot(dir,L);
+		float c = glm::dot(L,L)-radius;
+		float t0,t1;
+		if(!quadSolver(a,b,c,t0,t1)) return false;
+		if(t0>t1) std::swap(t0,t1);
+		if(t0<0)
+		{
+			t0=t1;
+			if(t0<0) return false;
+		}
+		*t=t0;
+		return true;
+	}
+};
 // Used to describe a triangular surface:
-class Triangle
+class Triangle : public Shape
 {
 public:
 	glm::vec3 v0;
@@ -31,11 +101,16 @@ public:
 		ior = 1.9f;
 		ComputeNormal();
 	}
+
 	void ComputeNormal()
 	{
 		glm::vec3 e1 = v1-v0;
 		glm::vec3 e2 = v2-v0;
 		normal = glm::normalize( glm::cross( e2, e1 ) );
+	}
+	glm::vec3 GetNormal(glm::vec3 intersectPoint)
+	{
+		return normal;
 	}
 	bool intersect(glm::vec3 start,glm::vec3 dir,float * t)
 	{
@@ -64,7 +139,7 @@ public:
 // -1 <= x <= +1
 // -1 <= y <= +1
 // -1 <= z <= +1
-void LoadTestModel( std::vector<Triangle>& triangles )
+void LoadTestModel( std::vector<Triangle*>& triangles )
 {
 	using glm::vec3;
 
@@ -96,26 +171,26 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	vec3 H(0,L,L);
 
 	// Floor:
-	triangles.push_back( Triangle( C, B, A, green ) );
-	triangles.push_back( Triangle( C, D, B, green ) );
+	triangles.push_back( new Triangle( C, B, A, green ) );
+	triangles.push_back( new Triangle( C, D, B, green ) );
 
 	// Left wall
 	// triangles.push_back( Triangle( A, E, C, purple ,kReflection) );
 	// triangles.push_back( Triangle( C, E, G, purple ,kReflection) );
-	triangles.push_back( Triangle( A, E, C, purple ) );
-	triangles.push_back( Triangle( C, E, G, purple ) );
+	triangles.push_back( new Triangle( A, E, C, purple ) );
+	triangles.push_back( new Triangle( C, E, G, purple ) );
 
 	// Right wall
-	triangles.push_back( Triangle( F, B, D, yellow ) );
-	triangles.push_back( Triangle( H, F, D, yellow ) );
+	triangles.push_back( new Triangle( F, B, D, yellow ) );
+	triangles.push_back( new Triangle( H, F, D, yellow ) );
 
 	// Ceiling
-	triangles.push_back( Triangle( E, F, G, cyan ) );
-	triangles.push_back( Triangle( F, H, G, cyan ) );
+	triangles.push_back( new Triangle( E, F, G, cyan ) );
+	triangles.push_back( new Triangle( F, H, G, cyan ) );
 
 	// Back wall
-	triangles.push_back( Triangle( G, D, C, white ) );
-	triangles.push_back( Triangle( G, H, D, white ) );
+	triangles.push_back( new Triangle( G, D, C, white ) );
+	triangles.push_back( new Triangle( G, H, D, white ) );
 
 	// ---------------------------------------------------------------------------
 	// Short block
@@ -131,24 +206,24 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	H = vec3( 82,165,225);
 
 	// Front
-	triangles.push_back( Triangle(E,B,A,red) );
-	triangles.push_back( Triangle(E,F,B,red) );
+	triangles.push_back( new Triangle(E,B,A,red) );
+	triangles.push_back( new Triangle(E,F,B,red) );
 
 	// Front
-	triangles.push_back( Triangle(F,D,B,red) );
-	triangles.push_back( Triangle(F,H,D,red) );
+	triangles.push_back( new Triangle(F,D,B,red) );
+	triangles.push_back( new Triangle(F,H,D,red) );
 
 	// BACK
-	triangles.push_back( Triangle(H,C,D,red) );
-	triangles.push_back( Triangle(H,G,C,red) );
+	triangles.push_back( new Triangle(H,C,D,red) );
+	triangles.push_back( new Triangle(H,G,C,red) );
 
 	// LEFT
-	triangles.push_back( Triangle(G,E,C,red) );
-	triangles.push_back( Triangle(E,A,C,red) );
+	triangles.push_back( new Triangle(G,E,C,red) );
+	triangles.push_back( new Triangle(E,A,C,red) );
 
 	// TOP
-	triangles.push_back( Triangle(G,F,E,red) );
-	triangles.push_back( Triangle(G,H,F,red) );
+	triangles.push_back( new Triangle(G,F,E,red) );
+	triangles.push_back( new Triangle(G,H,F,red) );
 
 	// ---------------------------------------------------------------------------
 	// Tall block
@@ -164,24 +239,24 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	H = vec3(314,330,456);
 
 	// Front
-	triangles.push_back( Triangle(E,B,A,blue,kReflectionAndRefraction) );
-	triangles.push_back( Triangle(E,F,B,blue,kReflectionAndRefraction) );
+	triangles.push_back( new Triangle(E,B,A,blue,kReflectionAndRefraction) );
+	triangles.push_back( new Triangle(E,F,B,blue,kReflectionAndRefraction) );
 
 	// Front
-	triangles.push_back( Triangle(F,D,B,blue,kReflectionAndRefraction) );
-	triangles.push_back( Triangle(F,H,D,blue,kReflectionAndRefraction) );
+	triangles.push_back( new Triangle(F,D,B,blue,kReflectionAndRefraction) );
+	triangles.push_back( new Triangle(F,H,D,blue,kReflectionAndRefraction) );
 
 	// BACK
-	triangles.push_back( Triangle(H,C,D,blue,kReflectionAndRefraction) );
-	triangles.push_back( Triangle(H,G,C,blue,kReflectionAndRefraction) );
+	triangles.push_back( new Triangle(H,C,D,blue,kReflectionAndRefraction) );
+	triangles.push_back( new Triangle(H,G,C,blue,kReflectionAndRefraction) );
 
 	// LEFT
-	triangles.push_back( Triangle(G,E,C,blue,kReflectionAndRefraction) );
-	triangles.push_back( Triangle(E,A,C,blue,kReflectionAndRefraction) );
+	triangles.push_back( new Triangle(G,E,C,blue,kReflectionAndRefraction) );
+	triangles.push_back( new Triangle(E,A,C,blue,kReflectionAndRefraction) );
 
 	// TOP
-	triangles.push_back( Triangle(G,F,E,blue,kReflectionAndRefraction) );
-	triangles.push_back( Triangle(G,H,F,blue,kReflectionAndRefraction) );
+	triangles.push_back( new Triangle(G,F,E,blue,kReflectionAndRefraction) );
+	triangles.push_back( new Triangle(G,H,F,blue,kReflectionAndRefraction) );
 
 
 	// ----------------------------------------------
@@ -189,23 +264,23 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 
 	for( size_t i=0; i<triangles.size(); ++i )
 	{
-		triangles[i].v0 *= 2/L;
-		triangles[i].v1 *= 2/L;
-		triangles[i].v2 *= 2/L;
+		((Triangle*)triangles[i])->v0 *= 2/L;
+		((Triangle*)triangles[i])->v1 *= 2/L;
+		((Triangle*)triangles[i])->v2 *= 2/L;
 
-		triangles[i].v0 -= vec3(1,1,1);
-		triangles[i].v1 -= vec3(1,1,1);
-		triangles[i].v2 -= vec3(1,1,1);
+		((Triangle*)triangles[i])->v0 -= vec3(1,1,1);
+		((Triangle*)triangles[i])->v1 -= vec3(1,1,1);
+		((Triangle*)triangles[i])->v2 -= vec3(1,1,1);
 
-		triangles[i].v0.x *= -1;
-		triangles[i].v1.x *= -1;
-		triangles[i].v2.x *= -1;
+		((Triangle*)triangles[i])->v0.x *= -1;
+		((Triangle*)triangles[i])->v1.x *= -1;
+		((Triangle*)triangles[i])->v2.x *= -1;
 
-		triangles[i].v0.y *= -1;
-		triangles[i].v1.y *= -1;
-		triangles[i].v2.y *= -1;
+		((Triangle*)triangles[i])->v0.y *= -1;
+		((Triangle*)triangles[i])->v1.y *= -1;
+		((Triangle*)triangles[i])->v2.y *= -1;
 
-		triangles[i].ComputeNormal();
+		((Triangle*)triangles[i])->ComputeNormal();
 	}
 }
 
