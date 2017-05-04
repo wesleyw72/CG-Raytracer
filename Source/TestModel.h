@@ -222,8 +222,8 @@ void LoadTestModel( std::vector<Triangle*>& triangles )
 	triangles.push_back( new Triangle(E,A,C,red) );
 
 	// TOP
-	triangles.push_back( new Triangle(G,F,E,red) );
-	triangles.push_back( new Triangle(G,H,F,red) );
+	triangles.push_back( new Triangle(G,F,E,red,kReflection) );
+	triangles.push_back( new Triangle(G,H,F,red,kReflection) );
 
 	// ---------------------------------------------------------------------------
 	// Tall block
