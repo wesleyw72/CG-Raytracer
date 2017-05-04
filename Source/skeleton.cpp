@@ -114,7 +114,8 @@ vec3 CastRay(const vec3& origin,const vec3& dir,const int depth,const int Triang
 					vec3 pLi;
 					vec3 norm = glm::normalize(triangles[closestIntersection.triangleIndex]->GetNormal(closestIntersection.position));
 					lights[i]->illuminate(closestIntersection.position,dir,pLi,norm,rL);
-					pLi = (pLi+indirectLight)* triangles[closestIntersection.triangleIndex]->color;
+					d+= indirectLight*triangles[closestIntersection.triangleIndex]->color;
+					pLi = pLi* triangles[closestIntersection.triangleIndex]->color;
 					Intersection closestIntersection2;
 					float m = std::numeric_limits<float>::max();
 					closestIntersection2.distance = m;
@@ -124,7 +125,7 @@ vec3 CastRay(const vec3& origin,const vec3& dir,const int depth,const int Triang
 					{
 						if(closestIntersection2.distance<rL)
 						{
-							vis = true;
+							vis = false;
 						}
 					}
 					if(vis)
